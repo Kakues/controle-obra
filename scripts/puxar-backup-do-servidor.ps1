@@ -6,7 +6,7 @@
 #
 # Configure abaixo:
 
-$Servidor = "usuario@192.168.1.50"   # usuário@IP do notebook
+$Servidor = "kaikyn@192.168.1.100"   # usuário@IP do notebook
 $PastaRemota = "~/controle-obra/storage/backups"
 $PastaLocal = "C:\Users\kakam\backups-controle-obra"
 $Manter = 8

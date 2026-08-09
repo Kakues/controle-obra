@@ -17,7 +17,7 @@ sudo usermod -aG docker $USER
 
 ## 2. Copiar o projeto
 
-No notebook:image.png
+No notebook:
 
 ```bash
 cd ~
@@ -35,15 +35,54 @@ cp .env.example .env
 # APP_URL=http://192.168.1.50
 ```
 
-Gere a chave e suba os containers (Sail):
+Gere a chave e suba os containers (Sail com **PHP 8.4**):
 
 ```bash
-docker run --rm -v "$(pwd)":/var/www/html -w /var/www/html laravelsail/php84-composer:latest composer install --no-dev
+# Importante: NÃO use --no-dev aqui.
+# O Laravel Sail está em require-dev; sem ele não existe ./vendor/bin/sail.
+docker run --rm -v "$(pwd)":/var/www/html -w /var/www/html laravelsail/php84-composer:latest composer install
+./vendor/bin/sail build --no-cache
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate --force
 ./vendor/bin/sail artisan db:seed --force
 ./vendor/bin/sail npm install && ./vendor/bin/sail npm run build
+```
+
+Se o `vendor` já existir mas o Sail faltar (porque rodou com `--no-dev`), rode de novo o `composer install` acima e confira:
+
+```bash
+ls -la vendor/bin/sail
+```
+
+### Se o `sail build` falhar (erro `failed to solve` / `exit code: 1`)
+
+A imagem do Sail é bem pesada. Em notebook antigo costuma falhar por memória, rede ou timeout.
+
+Tente nesta ordem:
+
+```bash
+# Liberar espaço Docker
+docker system prune -af
+
+# Build de novo (PHP 8.4 — já configurado no compose.yaml)
+./vendor/bin/sail build --no-cache
+./vendor/bin/sail up -d
+```
+
+**Plano B — copiar a imagem pronta do PC para o notebook**
+
+No PC (WSL), depois que a imagem `sail-8.4/app` existir:
+
+```bash
+docker save sail-8.4/app | gzip > /mnt/c/Users/kakam/sail-8.4-app.tar.gz
+```
+
+Leve o arquivo para o notebook e rode:
+
+```bash
+gunzip -c sail-8.4-app.tar.gz | docker load
+./vendor/bin/sail up -d
 ```
 
 ## 4. Usuários iniciais
