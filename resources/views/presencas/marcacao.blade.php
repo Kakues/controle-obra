@@ -54,6 +54,8 @@
                     <p class="text-xs text-gray-500 mt-1">Usada quando a pessoa não tiver obra específica.</p>
                 </div>
 
+                <p class="text-xs text-gray-500">Só entram pessoas em regime de diária. Empreiteiros são pagos por lançamento.</p>
+
                 <div class="bg-white shadow-sm rounded-lg divide-y">
                     @forelse ($funcionarios as $funcionario)
                         @php $presenca = $presencas->get($funcionario->id); @endphp
@@ -125,7 +127,7 @@
                             @endif
                         </div>
                     @empty
-                        <div class="p-6 text-gray-500">Cadastre funcionários ativos primeiro.</div>
+                        <div class="p-6 text-gray-500">Nenhuma pessoa em diária ativa. Empreiteiros não aparecem aqui.</div>
                     @endforelse
                 </div>
 

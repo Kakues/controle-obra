@@ -35,9 +35,14 @@
                         <div>
                             <div class="font-medium text-gray-900">{{ $funcionario->nome }}</div>
                             <div class="text-sm text-gray-500">
-                                Diária R$ {{ number_format($funcionario->diaria_atual, 2, ',', '.') }}
-                                @if ($funcionario->temLocomocao())
-                                    · {{ $funcionario->labelLocomocao() }} R$ {{ number_format($funcionario->locomocao_valor, 2, ',', '.') }}/dia
+                                {{ $funcionario->labelRegime() }}
+                                @if ($funcionario->isDiaria())
+                                    · Diária R$ {{ number_format($funcionario->diaria_atual, 2, ',', '.') }}
+                                    @if ($funcionario->temLocomocao())
+                                        · {{ $funcionario->labelLocomocao() }} R$ {{ number_format($funcionario->locomocao_valor, 2, ',', '.') }}/dia
+                                    @endif
+                                @else
+                                    · Valor lançado por período
                                 @endif
                                 @if ($funcionario->telefone) · {{ $funcionario->telefone }} @endif
                             </div>

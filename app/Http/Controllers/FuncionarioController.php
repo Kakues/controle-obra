@@ -41,8 +41,17 @@ class FuncionarioController extends Controller
             $dados['locomocao_valor'] = 0;
         }
 
+        if ($dados['regime'] === 'empreita') {
+            $dados['diaria_atual'] = 0;
+            $dados['locomocao_tipo'] = 'nenhuma';
+            $dados['locomocao_valor'] = 0;
+        }
+
         $funcionario = Funcionario::create($dados);
-        $diarias->atualizarDiaria($funcionario, (float) $dados['diaria_atual'], now());
+
+        if ($funcionario->isDiaria()) {
+            $diarias->atualizarDiaria($funcionario, (float) $dados['diaria_atual'], now());
+        }
 
         return redirect()->route('funcionarios.index')->with('success', 'Funcionário cadastrado.');
     }
@@ -62,7 +71,19 @@ class FuncionarioController extends Controller
 
         $historico = $funcionario->diariaHistoricos()->limit(20)->get();
 
-        return view('funcionarios.show', compact('funcionario', 'mes', 'inicio', 'fim', 'presencas', 'historico'));
+        $lancamentosRecentes = $funcionario->isEmpreita()
+            ? $funcionario->lancamentos()->with('periodo')->orderByDesc('data')->limit(30)->get()
+            : collect();
+
+        return view('funcionarios.show', compact(
+            'funcionario',
+            'mes',
+            'inicio',
+            'fim',
+            'presencas',
+            'historico',
+            'lancamentosRecentes'
+        ));
     }
 
     public function edit(Funcionario $funcionario): View
@@ -74,14 +95,24 @@ class FuncionarioController extends Controller
     {
         $dados = $this->validated($request, true);
         $novaDiaria = (float) $dados['diaria_atual'];
-        $diariaMudou = abs($novaDiaria - (float) $funcionario->diaria_atual) > 0.001;
 
         if ($dados['locomocao_tipo'] === 'nenhuma') {
             $dados['locomocao_valor'] = 0;
         }
 
+        if ($dados['regime'] === 'empreita') {
+            $novaDiaria = 0;
+            $dados['diaria_atual'] = 0;
+            $dados['locomocao_tipo'] = 'nenhuma';
+            $dados['locomocao_valor'] = 0;
+        }
+
+        $diariaMudou = $dados['regime'] === 'diaria'
+            && abs($novaDiaria - (float) $funcionario->diaria_atual) > 0.001;
+
         $funcionario->update([
             'nome' => $dados['nome'],
+            'regime' => $dados['regime'],
             'telefone' => $dados['telefone'] ?? null,
             'observacoes' => $dados['observacoes'] ?? null,
             'diaria_atual' => $novaDiaria,
@@ -126,8 +157,9 @@ class FuncionarioController extends Controller
     {
         $regras = [
             'nome' => ['required', 'string', 'max:255'],
+            'regime' => ['required', Rule::in(array_keys(Funcionario::REGIMES))],
             'telefone' => ['nullable', 'string', 'max:50'],
-            'diaria_atual' => ['required', 'numeric', 'min:0'],
+            'diaria_atual' => ['nullable', 'numeric', 'min:0', 'required_if:regime,diaria'],
             'locomocao_tipo' => ['required', Rule::in(array_keys(Funcionario::LOCOMOCAO_TIPOS))],
             'locomocao_valor' => ['nullable', 'numeric', 'min:0'],
             'observacoes' => ['nullable', 'string'],
@@ -138,6 +170,7 @@ class FuncionarioController extends Controller
         }
 
         $dados = $request->validate($regras);
+        $dados['diaria_atual'] = (float) ($dados['diaria_atual'] ?? 0);
         $dados['locomocao_valor'] = (float) ($dados['locomocao_valor'] ?? 0);
 
         return $dados;

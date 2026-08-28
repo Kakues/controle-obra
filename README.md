@@ -41,12 +41,17 @@ Deploy no notebook: veja [DEPLOY.md](DEPLOY.md).
 - Relatório de custo por obra
 - Backup: `./scripts/backup.sh`
 
-## Comandos úteis
+## Backup neste PC
 
 ```bash
-./vendor/bin/sail artisan migrate
-./vendor/bin/sail artisan db:seed
-./vendor/bin/sail test
-./scripts/backup.sh
-./vendor/bin/sail down
+cd ~/controle-obra
+./scripts/backup-pc.sh
+```
+
+Arquivos em: `C:\Users\kakam\backups-controle-obra`
+
+Limpar dados e recomeçar do zero:
+
+```bash
+./vendor/bin/sail artisan app:limpar-dados-teste --force
 ```

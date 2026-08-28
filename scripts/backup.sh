@@ -31,9 +31,9 @@ mkdir -p "$DESTINO"
 cd "$ROOT_DIR"
 
 if [[ -x "./vendor/bin/sail" ]] && ./vendor/bin/sail ps >/dev/null 2>&1; then
-  ./vendor/bin/sail exec -T mysql mysqldump -u"${DB_USERNAME:-sail}" -p"${DB_PASSWORD:-password}" "${DB_DATABASE:-laravel}" | gzip > "$ARQUIVO"
+  ./vendor/bin/sail exec -T mysql mysqldump --no-tablespaces -u"${DB_USERNAME:-sail}" -p"${DB_PASSWORD:-password}" "${DB_DATABASE:-laravel}" | gzip > "$ARQUIVO"
 else
-  docker compose exec -T mysql mysqldump -u"${DB_USERNAME:-sail}" -p"${DB_PASSWORD:-password}" "${DB_DATABASE:-laravel}" | gzip > "$ARQUIVO"
+  docker compose exec -T mysql mysqldump --no-tablespaces -u"${DB_USERNAME:-sail}" -p"${DB_PASSWORD:-password}" "${DB_DATABASE:-laravel}" | gzip > "$ARQUIVO"
 fi
 
 # Mantém só os últimos N backups locais

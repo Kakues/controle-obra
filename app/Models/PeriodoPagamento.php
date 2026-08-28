@@ -47,4 +47,17 @@ class PeriodoPagamento extends Model
     {
         return $this->status === 'aberto';
     }
+
+    public function label(): string
+    {
+        $nome = $this->nome ?: 'Período';
+        $intervalo = $this->data_inicio->format('d/m/Y').' a '.$this->data_fim->format('d/m/Y');
+
+        return "{$nome} · {$intervalo}";
+    }
+
+    public function badgeStatus(): string
+    {
+        return self::STATUS[$this->status] ?? $this->status;
+    }
 }

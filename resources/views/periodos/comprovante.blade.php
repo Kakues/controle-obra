@@ -123,6 +123,12 @@
                             <td>Total locomoção</td>
                             <td class="valor">R$ {{ number_format($item['total_locomocao'], 2, ',', '.') }}</td>
                         </tr>
+                        @if ($item['empreitas'] > 0)
+                            <tr>
+                                <td>Empreita</td>
+                                <td class="valor">R$ {{ number_format($item['empreitas'], 2, ',', '.') }}</td>
+                            </tr>
+                        @endif
                         @if ($item['bonus'] > 0)
                             <tr>
                                 <td>Bônus</td>

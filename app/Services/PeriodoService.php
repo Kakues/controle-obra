@@ -16,11 +16,13 @@ class PeriodoService
      *   dias: int,
      *   total_diarias: float,
      *   total_locomocao: float,
+     *   empreitas: float,
      *   adiantamentos: float,
      *   descontos: float,
      *   bonus: float,
      *   a_pagar: float,
-     *   presencas: Collection
+     *   presencas: Collection,
+     *   lancamentos: Collection
      * }>
      */
     public function resumo(PeriodoPagamento $periodo): Collection
@@ -35,6 +37,7 @@ class PeriodoService
             ->groupBy('funcionario_id');
 
         $lancamentos = Lancamento::query()
+            ->with('funcionario')
             ->where(function ($q) use ($periodo, $inicio, $fim) {
                 $q->where('periodo_pagamento_id', $periodo->id)
                     ->orWhere(function ($q2) use ($inicio, $fim) {
@@ -59,6 +62,7 @@ class PeriodoService
 
             $totalDiarias = (float) $listaPresencas->sum('valor_aplicado');
             $totalLocomocao = (float) $listaPresencas->sum('valor_locomocao');
+            $empreitas = (float) $listaLancamentos->where('tipo', 'empreita')->sum('valor');
             $adiantamentos = (float) $listaLancamentos->where('tipo', 'adiantamento')->sum('valor');
             $descontos = (float) $listaLancamentos->where('tipo', 'desconto')->sum('valor');
             $bonus = (float) $listaLancamentos->where('tipo', 'bonus')->sum('valor');
@@ -68,18 +72,17 @@ class PeriodoService
                 'dias' => $listaPresencas->count(),
                 'total_diarias' => $totalDiarias,
                 'total_locomocao' => $totalLocomocao,
+                'empreitas' => $empreitas,
                 'adiantamentos' => $adiantamentos,
                 'descontos' => $descontos,
                 'bonus' => $bonus,
-                'a_pagar' => round($totalDiarias + $totalLocomocao + $bonus - $adiantamentos - $descontos, 2),
+                'a_pagar' => round($totalDiarias + $totalLocomocao + $empreitas + $bonus - $adiantamentos - $descontos, 2),
                 'presencas' => $listaPresencas,
+                'lancamentos' => $listaLancamentos,
             ];
         })->sortBy(fn ($item) => $item['funcionario']?->nome)->values();
     }
 
-    /**
-     * Quantas presenças já existem no intervalo (mesmo antes de criar o período).
-     */
     public function contarPresencasNoIntervalo(string $inicio, string $fim): int
     {
         return Presenca::query()

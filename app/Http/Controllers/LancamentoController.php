@@ -14,12 +14,45 @@ class LancamentoController extends Controller
 {
     public function index(Request $request): View
     {
-        $tipo = $request->string('tipo')->toString();
+        $periodos = PeriodoPagamento::query()
+            ->orderByDesc('data_inicio')
+            ->get();
+
+        $filtroExplicito = $request->has('filtro');
+
+        if (! $filtroExplicito) {
+            $periodoId = $periodos->firstWhere('status', 'aberto')?->id;
+            $tiposSelecionados = array_keys(Lancamento::TIPOS);
+        } else {
+            $periodoId = $request->filled('periodo_pagamento_id')
+                ? $request->integer('periodo_pagamento_id')
+                : null;
+            $tiposSelecionados = $request->input('tipos', []);
+        }
+
         $funcionarioId = $request->integer('funcionario_id') ?: null;
+        $periodoFiltro = $periodoId ? $periodos->firstWhere('id', $periodoId) : null;
 
         $lancamentos = Lancamento::query()
             ->with(['funcionario', 'periodo', 'registradoPor'])
-            ->when($tipo !== '', fn ($q) => $q->where('tipo', $tipo))
+            ->when(
+                $periodoFiltro,
+                fn ($q) => $q->where(function ($q2) use ($periodoFiltro) {
+                    $q2->where('periodo_pagamento_id', $periodoFiltro->id)
+                        ->orWhere(function ($q3) use ($periodoFiltro) {
+                            $q3->whereNull('periodo_pagamento_id')
+                                ->whereBetween('data', [
+                                    $periodoFiltro->data_inicio->toDateString(),
+                                    $periodoFiltro->data_fim->toDateString(),
+                                ]);
+                        });
+                })
+            )
+            ->when(
+                ! empty($tiposSelecionados),
+                fn ($q) => $q->whereIn('tipo', $tiposSelecionados),
+                fn ($q) => $q->whereRaw('0 = 1')
+            )
             ->when($funcionarioId, fn ($q) => $q->where('funcionario_id', $funcionarioId))
             ->orderByDesc('data')
             ->orderByDesc('id')
@@ -28,7 +61,16 @@ class LancamentoController extends Controller
 
         $funcionarios = Funcionario::query()->orderBy('nome')->get();
 
-        return view('lancamentos.index', compact('lancamentos', 'funcionarios', 'tipo', 'funcionarioId'));
+        return view('lancamentos.index', compact(
+            'lancamentos',
+            'funcionarios',
+            'periodos',
+            'periodoId',
+            'periodoFiltro',
+            'tiposSelecionados',
+            'funcionarioId',
+            'filtroExplicito',
+        ));
     }
 
     public function create(Request $request): View

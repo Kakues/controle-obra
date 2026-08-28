@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Funcionario extends Model
 {
+    public const REGIMES = [
+        'diaria' => 'Diária',
+        'empreita' => 'Empreita',
+    ];
+
     public const LOCOMOCAO_TIPOS = [
         'nenhuma' => 'Sem auxílio',
         'onibus' => 'Ônibus / passagem',
@@ -17,6 +22,7 @@ class Funcionario extends Model
 
     protected $fillable = [
         'nome',
+        'regime',
         'telefone',
         'diaria_atual',
         'locomocao_tipo',
@@ -62,5 +68,20 @@ class Funcionario extends Model
     public function labelLocomocao(): string
     {
         return self::LOCOMOCAO_TIPOS[$this->locomocao_tipo] ?? $this->locomocao_tipo;
+    }
+
+    public function isDiaria(): bool
+    {
+        return ($this->regime ?? 'diaria') === 'diaria';
+    }
+
+    public function isEmpreita(): bool
+    {
+        return $this->regime === 'empreita';
+    }
+
+    public function labelRegime(): string
+    {
+        return self::REGIMES[$this->regime ?? 'diaria'] ?? $this->regime;
     }
 }

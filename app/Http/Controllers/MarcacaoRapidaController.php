@@ -19,6 +19,7 @@ class MarcacaoRapidaController extends Controller
 
         $funcionarios = Funcionario::query()
             ->where('ativo', true)
+            ->where('regime', 'diaria')
             ->orderBy('nome')
             ->get();
 
@@ -83,7 +84,7 @@ class MarcacaoRapidaController extends Controller
 
         foreach ($marcacoes as $funcionarioId => $marcacao) {
             $funcionario = Funcionario::find($funcionarioId);
-            if (! $funcionario) {
+            if (! $funcionario || ! $funcionario->isDiaria()) {
                 continue;
             }
 

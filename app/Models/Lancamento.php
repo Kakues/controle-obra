@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Lancamento extends Model
 {
     public const TIPOS = [
+        'empreita' => 'Valor empreita',
         'adiantamento' => 'Adiantamento',
         'desconto' => 'Desconto',
         'bonus' => 'Bônus',
