@@ -56,79 +56,69 @@
 
                 <p class="text-xs text-gray-500">Só entram pessoas em regime de diária. Empreiteiros são pagos por lançamento.</p>
 
-                <div class="bg-white shadow-sm rounded-lg divide-y">
-                    @forelse ($funcionarios as $funcionario)
-                        @php $presenca = $presencas->get($funcionario->id); @endphp
-                        <div class="p-4 space-y-3" x-data="{
-                            presente: {{ $presenca ? 'true' : 'false' }},
-                            pagarLocomocao: {{ ($presenca ? (float) $presenca->valor_locomocao > 0 : $funcionario->temLocomocao()) ? 'true' : 'false' }}
-                        }">
-                            <label class="flex items-center justify-between gap-3">
-                                <div>
-                                    <div class="font-medium text-gray-900">{{ $funcionario->nome }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        Diária R$ {{ number_format($funcionario->diaria_atual, 2, ',', '.') }}
-                                        @if ($funcionario->temLocomocao())
-                                            · {{ $funcionario->labelLocomocao() }} R$ {{ number_format($funcionario->locomocao_valor, 2, ',', '.') }}
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-sm text-gray-600">Foi</span>
-                                    <input type="checkbox"
-                                           name="marcacoes[{{ $funcionario->id }}][presente]"
-                                           value="1"
-                                           x-model="presente"
-                                           class="rounded border-gray-300"
-                                           @disabled($periodoFechado)>
-                                </div>
-                            </label>
-
-                            <div x-show="presente" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label class="text-xs text-gray-500">Obra</label>
-                                    <select name="marcacoes[{{ $funcionario->id }}][obra_id]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @disabled($periodoFechado)>
-                                        <option value="">Usar padrão</option>
-                                        @foreach ($obras as $obra)
-                                            <option value="{{ $obra->id }}" @selected(optional($presenca)->obra_id == $obra->id)>{{ $obra->nome }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500">Tipo</label>
-                                    <select name="marcacoes[{{ $funcionario->id }}][tipo]" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm" @disabled($periodoFechado)>
-                                        @foreach (\App\Models\Presenca::TIPOS as $valor => $label)
-                                            <option value="{{ $valor }}" @selected(optional($presenca)->tipo == $valor)>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500">Valor especial (opcional)</label>
-                                    <input type="number" step="0.01" min="0" inputmode="decimal"
-                                           name="marcacoes[{{ $funcionario->id }}][valor_especial]"
-                                           class="mt-1 block w-full border-gray-300 rounded-md shadow-sm text-sm"
-                                           value="{{ optional($presenca)->tipo === 'especial' ? $presenca->valor_aplicado : '' }}"
-                                           @disabled($periodoFechado)>
-                                </div>
+                <div class="space-y-6">
+                    @if ($agrupado['diretos']->isNotEmpty())
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold text-gray-800">Pessoal direto</h3>
+                                <span class="text-xs text-gray-500">{{ $agrupado['diretos']->count() }} pessoa(s)</span>
                             </div>
 
-                            @if ($funcionario->temLocomocao())
-                                <label x-show="presente" class="flex items-center gap-2 text-sm text-gray-700">
-                                    <input type="hidden" name="marcacoes[{{ $funcionario->id }}][pagar_locomocao]" value="0">
-                                    <input type="checkbox"
-                                           name="marcacoes[{{ $funcionario->id }}][pagar_locomocao]"
-                                           value="1"
-                                           x-model="pagarLocomocao"
-                                           class="rounded border-gray-300"
-                                           @disabled($periodoFechado)>
-                                    Pagar locomoção neste dia
-                                    ({{ $funcionario->labelLocomocao() }} · R$ {{ number_format($funcionario->locomocao_valor, 2, ',', '.') }})
-                                </label>
-                            @endif
+                            <div class="bg-white shadow-sm rounded-lg divide-y">
+                                @foreach ($agrupado['diretos'] as $funcionario)
+                                    @include('presencas._marcacao-linha', [
+                                        'funcionario' => $funcionario,
+                                        'indentado' => false,
+                                        'papel' => null,
+                                    ])
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
+
+                    @if ($agrupado['equipes']->isNotEmpty())
+                        <section class="space-y-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="text-sm font-semibold text-gray-800">Equipes</h3>
+                                <span class="text-xs text-gray-500">{{ $agrupado['equipes']->count() }} equipe(s)</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                @foreach ($agrupado['equipes'] as $bloco)
+                                    <div class="rounded-xl border-2 border-stone-300 overflow-hidden shadow-sm bg-white">
+                                        <x-equipe-cabecalho
+                                            :lider="$bloco['lider']"
+                                            :membros-count="$bloco['membros']->count()"
+                                        />
+
+                                        <div class="divide-y">
+                                            @if ($bloco['lider']->isDiaria())
+                                                @include('presencas._marcacao-linha', [
+                                                    'funcionario' => $bloco['lider'],
+                                                    'indentado' => false,
+                                                    'papel' => 'lider',
+                                                ])
+                                            @endif
+
+                                            @foreach ($bloco['membros'] as $funcionario)
+                                                @include('presencas._marcacao-linha', [
+                                                    'funcionario' => $funcionario,
+                                                    'indentado' => true,
+                                                    'papel' => 'ajudante',
+                                                ])
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </section>
+                    @endif
+
+                    @if ($agrupado['diretos']->isEmpty() && $agrupado['equipes']->isEmpty())
+                        <div class="bg-white shadow-sm rounded-lg p-6 text-gray-500">
+                            Nenhuma pessoa em diária ativa. Empreiteiros não aparecem aqui.
                         </div>
-                    @empty
-                        <div class="p-6 text-gray-500">Nenhuma pessoa em diária ativa. Empreiteiros não aparecem aqui.</div>
-                    @endforelse
+                    @endif
                 </div>
 
                 @if (! $periodoFechado && $funcionarios->isNotEmpty())

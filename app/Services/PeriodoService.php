@@ -30,14 +30,14 @@ class PeriodoService
         [$inicio, $fim] = $this->intervalo($periodo);
 
         $presencas = Presenca::query()
-            ->with(['funcionario', 'obra'])
+            ->with(['funcionario.superior', 'obra'])
             ->whereBetween('data', [$inicio, $fim])
             ->orderBy('data')
             ->get()
             ->groupBy('funcionario_id');
 
         $lancamentos = Lancamento::query()
-            ->with('funcionario')
+            ->with(['funcionario.superior'])
             ->where(function ($q) use ($periodo, $inicio, $fim) {
                 $q->where('periodo_pagamento_id', $periodo->id)
                     ->orWhere(function ($q2) use ($inicio, $fim) {
@@ -58,7 +58,7 @@ class PeriodoService
 
             $funcionario = $listaPresencas->first()?->funcionario
                 ?? $listaLancamentos->first()?->funcionario
-                ?? Funcionario::find($funcionarioId);
+                ?? Funcionario::with('superior')->find($funcionarioId);
 
             $totalDiarias = (float) $listaPresencas->sum('valor_aplicado');
             $totalLocomocao = (float) $listaPresencas->sum('valor_locomocao');

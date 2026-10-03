@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-            <div class="flex justify-between items-center gap-3">
+        <div class="flex justify-between items-center gap-3">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">Pessoal</h2>
             @if (Auth::user()->isAdmin())
                 <a href="{{ route('funcionarios.create') }}" class="inline-flex items-center px-3 py-2 bg-stone-800 text-white text-sm rounded-md">Novo</a>
@@ -29,31 +29,35 @@
                 </a>
             </div>
 
-            <div class="bg-white shadow-sm rounded-lg divide-y">
-                @forelse ($funcionarios as $funcionario)
-                    <a href="{{ route('funcionarios.show', $funcionario) }}" class="p-4 flex items-center justify-between gap-3 hover:bg-gray-50">
-                        <div>
-                            <div class="font-medium text-gray-900">{{ $funcionario->nome }}</div>
-                            <div class="text-sm text-gray-500">
-                                {{ $funcionario->labelRegime() }}
-                                @if ($funcionario->isDiaria())
-                                    · Diária R$ {{ number_format($funcionario->diaria_atual, 2, ',', '.') }}
-                                    @if ($funcionario->temLocomocao())
-                                        · {{ $funcionario->labelLocomocao() }} R$ {{ number_format($funcionario->locomocao_valor, 2, ',', '.') }}/dia
-                                    @endif
-                                @else
-                                    · Valor lançado por período
-                                @endif
-                                @if ($funcionario->telefone) · {{ $funcionario->telefone }} @endif
-                            </div>
-                            <div class="text-xs mt-1 {{ $funcionario->ativo ? 'text-green-700' : 'text-gray-400' }}">
-                                {{ $funcionario->ativo ? 'Ativo na equipe' : 'Removido (histórico preservado)' }}
+            <div class="space-y-4">
+                @forelse ($blocos as $bloco)
+                    @php $lider = $bloco['lider']; @endphp
+
+                    @if ($bloco['membros']->isNotEmpty())
+                        <div class="rounded-xl border-2 border-stone-300 overflow-hidden shadow-sm bg-white">
+                            <x-equipe-cabecalho :lider="$lider" :membros-count="$bloco['membros']->count()" />
+
+                            <div class="divide-y">
+                                <a href="{{ route('funcionarios.show', $lider) }}" class="p-4 flex items-center justify-between gap-3 hover:bg-stone-50">
+                                    @include('funcionarios._lista-linha', ['funcionario' => $lider, 'papel' => 'lider'])
+                                </a>
+
+                                @foreach ($bloco['membros'] as $membro)
+                                    <a href="{{ route('funcionarios.show', $membro) }}" class="p-4 flex items-center justify-between gap-3 hover:bg-sky-50/50 bg-sky-50/30 border-l-4 border-sky-300">
+                                        @include('funcionarios._lista-linha', ['funcionario' => $membro, 'papel' => 'ajudante'])
+                                    </a>
+                                @endforeach
                             </div>
                         </div>
-                        <span class="text-sm text-stone-600">Ver</span>
-                    </a>
+                    @else
+                        <div class="bg-white shadow-sm rounded-lg">
+                            <a href="{{ route('funcionarios.show', $lider) }}" class="p-4 flex items-center justify-between gap-3 hover:bg-gray-50">
+                                @include('funcionarios._lista-linha', ['funcionario' => $lider, 'papel' => null])
+                            </a>
+                        </div>
+                    @endif
                 @empty
-                    <div class="p-6 text-gray-500">
+                    <div class="bg-white shadow-sm rounded-lg p-6 text-gray-500">
                         @if ($filtro === 'inativos')
                             Nenhuma pessoa removida.
                         @else

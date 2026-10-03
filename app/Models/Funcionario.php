@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\DiariaService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Funcionario extends Model
@@ -23,6 +24,7 @@ class Funcionario extends Model
     protected $fillable = [
         'nome',
         'regime',
+        'superior_id',
         'telefone',
         'diaria_atual',
         'locomocao_tipo',
@@ -38,6 +40,16 @@ class Funcionario extends Model
             'locomocao_valor' => 'decimal:2',
             'ativo' => 'boolean',
         ];
+    }
+
+    public function superior(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'superior_id');
+    }
+
+    public function equipe(): HasMany
+    {
+        return $this->hasMany(self::class, 'superior_id')->orderBy('nome');
     }
 
     public function diariaHistoricos(): HasMany
@@ -83,5 +95,32 @@ class Funcionario extends Model
     public function labelRegime(): string
     {
         return self::REGIMES[$this->regime ?? 'diaria'] ?? $this->regime;
+    }
+
+    public function temSuperior(): bool
+    {
+        return $this->superior_id !== null;
+    }
+
+    public function temEquipe(): bool
+    {
+        if ($this->relationLoaded('equipe')) {
+            return $this->equipe->isNotEmpty();
+        }
+
+        return $this->equipe()->exists();
+    }
+
+    public function labelVinculo(): ?string
+    {
+        if ($this->temSuperior()) {
+            return 'Equipe de '.$this->superior?->nome;
+        }
+
+        if ($this->temEquipe()) {
+            return 'Líder de equipe';
+        }
+
+        return null;
     }
 }

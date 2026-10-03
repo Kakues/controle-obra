@@ -29,6 +29,18 @@
                     </select>
                 </div>
                 <div>
+                    <x-input-label for="superior_id" value="Líder da equipe" />
+                    <select id="superior_id" name="superior_id" class="block mt-1 w-full border-gray-300 rounded-md shadow-sm">
+                        <option value="">Trabalha direto comigo</option>
+                        @foreach ($lideres as $lider)
+                            <option value="{{ $lider->id }}" @selected(old('superior_id', $funcionario->superior_id) == $lider->id)>{{ $lider->nome }}</option>
+                        @endforeach
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Quem já lidera equipe não pode ter outro líder.
+                    </p>
+                </div>
+                <div>
                     <x-input-label for="telefone" value="Telefone" />
                     <x-text-input id="telefone" name="telefone" class="block mt-1 w-full" :value="old('telefone', $funcionario->telefone)" />
                 </div>

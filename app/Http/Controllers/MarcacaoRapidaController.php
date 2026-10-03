@@ -7,13 +7,14 @@ use App\Models\Obra;
 use App\Models\PeriodoPagamento;
 use App\Models\Presenca;
 use App\Services\DiariaService;
+use App\Services\EquipeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class MarcacaoRapidaController extends Controller
 {
-    public function create(Request $request): View
+    public function create(Request $request, EquipeService $equipes): View
     {
         $data = $request->string('data', now()->toDateString())->toString();
 
@@ -22,6 +23,8 @@ class MarcacaoRapidaController extends Controller
             ->where('regime', 'diaria')
             ->orderBy('nome')
             ->get();
+
+        $agrupado = $equipes->marcacaoAgrupada($funcionarios);
 
         $obras = Obra::query()
             ->where('ativa', true)
@@ -48,6 +51,7 @@ class MarcacaoRapidaController extends Controller
         return view('presencas.marcacao', compact(
             'data',
             'funcionarios',
+            'agrupado',
             'obras',
             'presencas',
             'periodoFechado',

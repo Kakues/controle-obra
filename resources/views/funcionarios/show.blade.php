@@ -45,6 +45,26 @@
                 @if ($funcionario->telefone)
                     <div class="text-sm text-gray-500 mt-2">{{ $funcionario->telefone }}</div>
                 @endif
+                @if ($funcionario->temSuperior())
+                    <div class="text-sm text-stone-700 mt-2">
+                        Líder: <a href="{{ route('funcionarios.show', $funcionario->superior) }}" class="underline">{{ $funcionario->superior->nome }}</a>
+                    </div>
+                @endif
+                @if ($funcionario->equipe->isNotEmpty())
+                    <div class="text-sm text-stone-700 mt-3">
+                        <div class="font-medium">Equipe ({{ $funcionario->equipe->count() }})</div>
+                        <ul class="mt-1 space-y-1">
+                            @foreach ($funcionario->equipe as $membro)
+                                <li>
+                                    <a href="{{ route('funcionarios.show', $membro) }}" class="underline">{{ $membro->nome }}</a>
+                                    @unless ($membro->ativo)
+                                        <span class="text-gray-400">· removido</span>
+                                    @endunless
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="text-sm mt-3 {{ $funcionario->ativo ? 'text-green-700' : 'text-amber-700' }}">
                     {{ $funcionario->ativo ? 'Ativo na equipe' : 'Removido da equipe (histórico preservado)' }}
                 </div>

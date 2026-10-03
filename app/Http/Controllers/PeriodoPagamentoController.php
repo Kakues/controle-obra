@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PagamentoFuncionario;
 use App\Models\PeriodoPagamento;
+use App\Services\EquipeService;
 use App\Services\PeriodoService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,9 +57,10 @@ class PeriodoPagamentoController extends Controller
             ->with('success', $mensagem);
     }
 
-    public function show(PeriodoPagamento $periodo, PeriodoService $service): View
+    public function show(PeriodoPagamento $periodo, PeriodoService $service, EquipeService $equipes): View
     {
         $resumo = $service->resumo($periodo);
+        $agrupado = $equipes->blocosResumo($resumo);
         $lancamentos = $periodo->lancamentos()
             ->with('funcionario')
             ->orderByDesc('data')
@@ -68,7 +70,7 @@ class PeriodoPagamentoController extends Controller
             ->get()
             ->keyBy('funcionario_id');
 
-        return view('periodos.show', compact('periodo', 'resumo', 'lancamentos', 'pagamentos'));
+        return view('periodos.show', compact('periodo', 'resumo', 'agrupado', 'lancamentos', 'pagamentos'));
     }
 
     public function fechar(PeriodoPagamento $periodo): RedirectResponse
