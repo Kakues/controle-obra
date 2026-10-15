@@ -55,22 +55,8 @@ Se o `vendor` já existir mas o Sail faltar (porque rodou com `--no-dev`), rode 
 ls -la vendor/bin/sail
 ```
 
-### Se o `sail build` falhar (erro `failed to solve` / `exit code: 1`)
 
-A imagem do Sail é bem pesada. Em notebook antigo costuma falhar por memória, rede ou timeout.
-
-Tente nesta ordem:
-
-```bash
-# Liberar espaço Docker
-docker system prune -af
-
-# Build de novo (PHP 8.4 — já configurado no compose.yaml)
-./vendor/bin/sail build --no-cache
-./vendor/bin/sail up -d
-```
-
-**Plano B — copiar a imagem pronta do PC para o notebook**
+**Copiar a imagem pronta do PC para o servidor**
 
 No PC (WSL), depois que a imagem `sail-8.4/app` existir:
 
