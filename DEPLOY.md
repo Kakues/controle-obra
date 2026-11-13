@@ -1,186 +1,175 @@
 # Deploy — Controle Obra (Ubuntu Server)
 
-Guia para subir o MVP no notebook com Ubuntu Server + Docker.
+Guia oficial para a subida, configuração e operação do MVP do sistema **Controle Obra** em ambiente de produção local (Ubuntu Server + Docker / Laravel Sail com PHP 8.4).
 
-## 1. Requisitos no notebook
+---
 
-- Ubuntu Server
-- Docker + Docker Compose plugin
-- Git
+## 1. Requisitos no Servidor
+
+Certifique-se de que o servidor possui os pacotes base necessários instalados e o utilizador devidamente configurado no grupo do Docker.
 
 ```bash
 sudo apt update
 sudo apt install -y docker.io docker-compose-v2 git
 sudo usermod -aG docker $USER
-# saia e entre de novo no SSH/usuário
 ```
+> **⚠️ Nota de Segurança:** Após executar o comando `usermod`, termine a sessão SSH e volte a iniciar sessão para aplicar as permissões de grupo.
 
-## 2. Copiar o projeto
+---
 
-No notebook:
+## 2. Obtenção do Código
 
-```bash
-cd ~
-git clone <seu-repositorio> controle-obra
-cd controle-obra
-```
+Pode obter o código-fonte diretamente via repositório Git ou através de transferência direta:
 
-Ou copie a pasta `/home/kaiky/controle-obra` via pendrive/`scp`.
+* **Opção A — Via Git:**
+  ```bash
+  cd ~
+  git clone <seu-repositorio> controle-obra
+  cd controle-obra
+  ```
+---
 
-## 3. Configurar ambiente
+## 3. Configuração de Ambiente e Execução
 
+### A. Configuração do Ficheiro de Ambiente
 ```bash
 cp .env.example .env
-# Ajuste APP_URL para o IP do notebook, ex:
-# APP_URL=http://192.168.1.50
 ```
+> **Importante:** Edite o ficheiro `.env` gerado e ajuste a variável `APP_URL` para refletir o IP real do seu servidor/notebook (ex: `APP_URL=http://192.168.1.50`).
 
-Gere a chave e suba os containers (Sail com **PHP 8.4**):
+### B. Otimização de Imagem Docker (Opcional, altamente recomendada)
+Para poupar tempo de compilação (*build*) no servidor, pode exportar a imagem Docker pré-construída diretamente da sua máquina de desenvolvimento WSL para o servidor:
+
+* **Na máquina de desenvolvimento (WSL):**
+  ```bash
+  docker save sail-8.4/app | gzip > /mnt/c/Users/user/sail-8.4-app.tar.gz
+  ```
+* **No servidor (após transferir o arquivo compactado):**
+  ```bash
+  gunzip -c sail-8.4-app.tar.gz | docker load
+  ```
+
+### C. Instalação de Dependências e Subida dos Contentores
+Execute os comandos abaixo para instalar as dependências com o PHP 8.4, compilar as imagens e iniciar os serviços em segundo plano:
 
 ```bash
-# Importante: NÃO use --no-dev aqui.
-# O Laravel Sail está em require-dev; sem ele não existe ./vendor/bin/sail.
+# Instalação das dependências do composer via imagem PHP 8.4 do Sail
 docker run --rm -v "$(pwd)":/var/www/html -w /var/www/html laravelsail/php84-composer:latest composer install
+
+# Subida e construção do ambiente
 ./vendor/bin/sail build --no-cache
 ./vendor/bin/sail up -d
+
+# Configuração da aplicação, migrações e dados iniciais
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate --force
 ./vendor/bin/sail artisan db:seed --force
+
+# Instalação e build dos assets frontend
 ./vendor/bin/sail npm install && ./vendor/bin/sail npm run build
 ```
 
-Se o `vendor` já existir mas o Sail faltar (porque rodou com `--no-dev`), rode de novo o `composer install` acima e confira:
+---
 
-```bash
-ls -la vendor/bin/sail
-```
+## 4. Utilizadores Iniciais
 
+O sistema é inicializado com dois perfis pré-configurados. **Recomenda-se a alteração imediata das passwords** após o primeiro acesso.
 
-**Copiar a imagem pronta do PC para o servidor**
+| Papel | E-mail de Acesso | Palavra-passe | Permissões Principais |
+| :--- | :--- | :--- | :--- |
+| **Admin** | `admin@controleobra.test` | `password` | Acesso total: cadastros, períodos, lançamentos, relatórios e fecho financeiro. |
+| **Ajudante** | `ajuda@controleobra.test` | `password` | Acesso restrito: marcação rápida de presença e consultas (sem permissão para fechar ou apagar). |
 
-No PC (WSL), depois que a imagem `sail-8.4/app` existir:
+---
 
-```bash
-docker save sail-8.4/app | gzip > /mnt/c/Users/kakam/sail-8.4-app.tar.gz
-```
+## 5. Acesso em Rede e Firewall
 
-Leve o arquivo para o notebook e rode:
-
-```bash
-gunzip -c sail-8.4-app.tar.gz | docker load
-./vendor/bin/sail up -d
-```
-
-## 4. Usuários iniciais
-
-| Papel | E-mail | Senha |
-|-------|--------|-------|
-| Admin | admin@controleobra.test | password |
-| Ajudante | ajuda@controleobra.test | password |
-
-**Troque as senhas** depois do primeiro login.
-
-- Admin: tudo
-- Ajudante: só marca presença e consulta (sem fechar período, sem apagar)
-
-## 5. Acesso na rede
-
-No notebook, descubra o IP:
-
+### A. Identificação do IP Local
+No terminal do servidor, descubra o endereço IP atribuído à interface de rede local:
 ```bash
 ip a
 ```
 
-No celular/PC da mesma Wi‑Fi: `http://IP-DO-NOTEBOOK`
-
-Libere a porta 80 no firewall se necessário:
-
+### B. Configuração do Firewall (UFW)
+Caso o acesso a partir de outros dispositivos na mesma rede esteja bloqueado, liberte a porta HTTP (80):
 ```bash
 sudo ufw allow 80/tcp
 sudo ufw enable
 ```
 
-## 6. Backup
+👉 Aceda à aplicação a partir de qualquer dispositivo na mesma rede Wi-Fi através de: `http://<IP-DO-NOTEBOOK>`
 
-### 6.1 Backup diário no notebook
+---
 
+## 6. Rotinas de Backup e Recuperação
+
+### 6.1 Backup Diário no Servidor
+Prepare o ambiente de backup executando os seguintes comandos:
 ```bash
 chmod +x scripts/backup.sh
 mkdir -p storage/backups
-cp .env.backup.example .env.backup   # opcional, para envio ao PC
+cp .env.backup.example .env.backup   # Opcional, para envio automatizado
 ./scripts/backup.sh
 ```
 
-Cron diário às 23h:
-
+Para automatizar a execução diária às 23h, adicione a seguinte linha ao seu `crontab` (`crontab -e`):
 ```cron
 0 23 * * * /home/SEU_USUARIO/controle-obra/scripts/backup.sh >> /home/SEU_USUARIO/controle-obra/storage/logs/backup.log 2>&1
 ```
 
-### 6.2 Cópia semanal para o seu PC Windows
+### 6.2 Cópia Semanal para o Host (Windows)
+A pasta de destino no PC Windows está pré-configurada em: `C:\Users\user\backups-controle-obra`
 
-Pasta já preparada no PC: `C:\Users\kakam\backups-controle-obra`
+* **Opção A — O PC puxa do notebook (Recomendada):**
+  1. Certifique-se de que o SSH está ativo no servidor: `sudo apt install openssh-server`.
+  2. No PC Windows, abra o PowerShell e valide a ligação: `ssh usuario@IP_DO_NOTEBOOK`.
+  3. Edite o script `C:\Ususer\backups-controle-obra\puxar-backup-do-servidor.ps1` inserindo o utilizador e o IP correto do notebook.
+  4. No Agendador de Tarefas do Windows, crie uma nova tarefa recorrente (ex: Domingo às 10h):
+     * **Ação:** `powershell.exe`
+     * **Argumentos:** `-ExecutionPolicy Bypass -File "C:\Users\user\backups-controle-obra\puxar-backup-do-servidor.ps1"`
 
-**Opção A — o PC puxa do notebook (recomendada)**
-
-1. No notebook, deixe o SSH ligado (`sudo apt install openssh-server`).
-2. No PC, abra PowerShell e teste:
-   ```powershell
-   ssh usuario@IP_DO_NOTEBOOK
-   ```
-3. Edite `C:\Users\kakam\backups-controle-obra\puxar-backup-do-servidor.ps1`
-   (coloque usuário e IP do notebook).
-4. Agendador de Tarefas do Windows → Nova tarefa:
-   - Disparo: semanal (ex.: domingo 10h)
-   - Ação: `powershell.exe`
-   - Argumentos:
+* **Opção B — O notebook envia para o PC:**
+  1. No Windows, ative o recurso opcional **Servidor OpenSSH**.
+  2. No servidor, configure o ficheiro `.env.backup`:
+     ```bash
+     COPIAR_PARA_PC=1
+     PC_DESTINO=user@IP_DO_PC:C:/Users/user/backups-controle-obra/
      ```
-     -ExecutionPolicy Bypass -File "C:\Users\kakam\backups-controle-obra\puxar-backup-do-servidor.ps1"
+  3. Adicione a tarefa ao `crontab` do servidor (ex: Domingo às 9h):
+     ```cron
+     0 9 * * 0 COPIAR_PARA_PC=1 /home/SEU_USUARIO/controle-obra/scripts/backup.sh >> /home/SEU_USUARIO/controle-obra/storage/logs/backup-pc.log 2>&1
      ```
-   - Marque “executar mesmo se o usuário não estiver logado” se quiser.
 
-Assim o backup fica no notebook **e** uma cópia semanal no PC. Se o notebook quebrar, você restaura pelo arquivo do PC.
-
-**Opção B — o notebook envia para o PC**
-
-1. No Windows: Configurações → Aplicativos → Recursos opcionais → **Servidor OpenSSH**.
-2. No notebook, configure `.env.backup`:
-   ```bash
-   COPIAR_PARA_PC=1
-   PC_DESTINO=kakam@IP_DO_PC:C:/Users/kakam/backups-controle-obra/
-   ```
-3. Cron semanal (domingo 9h) no notebook:
-   ```cron
-   0 9 * * 0 COPIAR_PARA_PC=1 /home/SEU_USUARIO/controle-obra/scripts/backup.sh >> /home/SEU_USUARIO/controle-obra/storage/logs/backup-pc.log 2>&1
-   ```
-
-**Opção C — OneDrive / Google Drive**
-
-Salve/copie os `.sql.gz` para uma pasta sincronizada na nuvem. Simples, mas depende da conta.
-
-### 6.3 Restaurar
-
-No servidor:
-
+### 6.3 Restauração de Base de Dados
+Para restaurar um ponto de salvaguarda diretamente no servidor:
 ```bash
 gunzip -c storage/backups/controle-obra-XXXX.sql.gz | ./vendor/bin/sail exec -T mysql mysql -u sail -ppassword laravel
 ```
+*(Também pode utilizar os ficheiros sincronizados na pasta do seu PC Windows, se necessário).*
 
-Ou use o arquivo baixado em `C:\Users\kakam\backups-controle-obra`.
+---
 
-## 7. Fora da Wi‑Fi (depois)
+## 7. Acesso Remoto (Fora da Wi-Fi Local)
 
-Opções:
-- Cloudflare Tunnel / Tailscale (recomendado para começar)
-- Hospedagem/VPS com domínio
+Caso precise de aceder ao sistema fora da rede local do canteiro de obras, recomenda-se a utilização de túneis seguros:
+* **Tailscale** ou **Cloudflare Tunnel** (soluções rápidas, seguras e fáceis de configurar para manter o acesso externo sem expor portas diretamente).
 
-O notebook precisa ficar ligado e com internet estável.
+---
 
-## 8. Comandos do dia a dia
+## 8. Comandos Operacionais (Dia a Dia)
+
+Guarde os comandos mais comuns para a gestão diária do ambiente:
 
 ```bash
+# Iniciar os serviços em background
 ./vendor/bin/sail up -d
+
+# Parar os serviços
 ./vendor/bin/sail down
+
+# Aplicar migrações pendentes em produção
 ./vendor/bin/sail artisan migrate --force
+
+# Executar backup manual imediato
 ./scripts/backup.sh
 ```
